@@ -162,8 +162,8 @@ function Modal({ d, close, onComplete }) {
   );
 }
 
-function Quiz({ d, finish }) {
-  const [p, setP] = useState(null);
+function Quiz({ d, review = false, finish }) {
+  const [p, setP] = useState(review ? d.c : null);
   return createPortal(
     <div className="knowledge-backdrop">
       <section className="knowledge-modal">
@@ -175,6 +175,7 @@ function Quiz({ d, finish }) {
           {d.a.map((x, i) => (
             <button
               key={x}
+              disabled={review}
               onClick={() => setP(i)}
               className={p === i ? (i === d.c ? "correct" : "wrong") : ""}
             >
@@ -189,7 +190,7 @@ function Quiz({ d, finish }) {
               {p === d.c ? d.g : d.b}
             </p>
             <button className="finish-check" onClick={finish}>
-              Finish check <ArrowRight size={18} />
+              {review ? "Done" : "Finish check"} {review ? <Check size={18} /> : <ArrowRight size={18} />}
             </button>
           </>
         )}
@@ -199,11 +200,27 @@ function Quiz({ d, finish }) {
   );
 }
 
+function KnowledgeActions({ complete, onOpen, centered = false }) {
+  if (!complete) {
+    return <button className={`knowledge-cta ${centered ? "centered" : ""}`} onClick={() => onOpen(false)}><Target size={18} /> Start knowledge check <ArrowRight size={18} /></button>;
+  }
+  return (
+    <div className={`knowledge-actions completed ${centered ? "centered" : ""}`}>
+      <div className="knowledge-complete"><span><Check size={18} /></span><div><strong>Knowledge check completed</strong><small>You can review your answer or try again.</small></div></div>
+      <div className="knowledge-action-buttons">
+        <button className="knowledge-cta" onClick={() => onOpen(true)}><Target size={18} /> Review answers</button>
+        <button className="knowledge-retake" onClick={() => onOpen(false)}>Retake</button>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [s, setS] = useState(0);
   const [done, setDone] = useState(Array(5).fill(false));
   const [modal, setModal] = useState(null);
   const [quiz, setQuiz] = useState(null);
+  const [quizReview, setQuizReview] = useState(false);
   const [sound, setSound] = useState(true);
   const [pipelineRead, setPipelineRead] = useState(Array(3).fill(false));
   const [timingReviewed, setTimingReviewed] = useState(false);
@@ -297,13 +314,7 @@ function App() {
           })}
         </div>
         {pipelineRead.every(Boolean) && (
-          <button
-            className="knowledge-cta centered"
-            onClick={() => setQuiz(0)}
-          >
-            <Target size={18} /> {done[2] ? "Retake knowledge check" : "Start knowledge check"}{" "}
-            <ArrowRight size={18} />
-          </button>
+          <KnowledgeActions centered complete={done[2]} onOpen={(review) => { setQuizReview(review); setQuiz(0); }} />
         )}
       </div>
     );
@@ -324,14 +335,7 @@ function App() {
             <ArrowRight size={18} />
           </button>
           {timingReviewed && (
-            <button
-              className="knowledge-cta"
-              style={{ marginTop: 14 }}
-              onClick={() => setQuiz(1)}
-            >
-              <Target size={18} /> {done[3] ? "Retake knowledge check" : "Start knowledge check"}{" "}
-              <ArrowRight size={18} />
-            </button>
+            <KnowledgeActions complete={done[3]} onOpen={(review) => { setQuizReview(review); setQuiz(1); }} />
           )}
         </div>
         <img className="lesson-art" src={img("proven-midproject-timing")} alt="Proven learning timing" />
@@ -454,6 +458,7 @@ function App() {
       {quiz !== null && (
         <Quiz
           d={quizzes[quiz]}
+          review={quizReview}
           finish={() => {
             mark(quiz === 0 ? 2 : 3);
             setQuiz(null);
